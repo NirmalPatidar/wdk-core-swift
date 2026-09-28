@@ -28,5 +28,19 @@ let package = Package(
             name: "WdkSwiftCoreTests",
             dependencies: ["WdkSwiftCore"]
         ),
+        .plugin(
+            name: "WdkSetupPlugin",
+            capability: .command(
+                intent: .custom(
+                    verb: "wdk-setup",
+                    description: "Fetch BareKit, generate the worklet bundle and addons, and produce the local .wdk-runtime satellite package"
+                ),
+                permissions: [
+                    .writeToPackageDirectory(
+                        reason: "Writes the generated worklet bundle, addon xcframeworks, BareKit.xcframework, and the local .wdk-runtime satellite package"
+                    )
+                ]
+            )
+        ),
     ]
 )
