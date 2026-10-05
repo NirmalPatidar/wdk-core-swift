@@ -6,14 +6,13 @@ Supported networks: EVM (Ethereum, Polygon, Arbitrum, Sepolia, etc.), Bitcoin, S
 
 ## Integration Guide
 
-Adding `WdkSwiftCore` to your own project takes one setup command plus adding
-two Swift Package dependencies — see **[INTEGRATION.md](INTEGRATION.md)** for
-the full guide, including the manual artifact-by-artifact process it
-replaces and a note on one known limitation (worker-thread-dependent
-operations currently crash; tracked upstream).
+Adding `WdkSwiftCore` to your own project takes one setup command plus adding two Swift Package
+dependencies — see **[INTEGRATION.md](INTEGRATION.md)** for the full guide. It also lists exactly which
+engine, BareKit and bundler combinations have been verified, and explains the temporary flags the setup
+command currently needs.
 
-For running the existing example rather than integrating into your own app,
-see [wdk-starter-swift](https://github.com/Tetherto/wdk-starter-swift).
+For running the existing example rather than integrating into your own app, see
+[wdk-starter-swift](https://github.com/Tetherto/wdk-starter-swift).
 
 ## Example
 
@@ -145,27 +144,32 @@ Your App
 
 ## Running the Tests
 
-The test suite runs on macOS against a real worklet bundle and the addon frameworks. Generate them with the bundler using `platforms: ["macos"]`, `convertEsmToCjs: true`, and `output.bundle: "./.wdk-bundle/wdk-worklet.macos.bundle"`, then place them where the tests expect:
-
-```
-Frameworks/BareKit.xcframework          # from bare-kit releases
-Tests/Resources/macos/wdk-worklet.macos.bundle
-Tests/Resources/macos/Frameworks/*.framework   # contents of mac-addons/
-```
-
-Then prepare the frameworks and run the suite:
+The test suite runs on macOS against a real worklet bundle and the addon frameworks. The setup script
+generates and stages them, then you run the suite:
 
 ```bash
-./Scripts/prepare-macos-frameworks.sh   # fix rpaths, re-sign ad hoc, unquarantine BareKit
-./Scripts/test-with-frameworks.sh    # wraps `swift test` with BareKit linked
+node Scripts/wdk-setup.js --platform macos --engine jsc --barekit-tag v2.3.0 \
+  --pin bare-thread@1.2.4 --pin bare-type@1.1.0 --pin bare-module@6.4.0 \
+  --pin bare-channel@5.2.4 --pin bare-broadcast-channel@0.2.0 \
+  --pin bare-inspect@3.1.4 --pin bare-structured-clone@1.6.0 --pin bare-worker@4.4.0
+./Scripts/test-with-frameworks.sh
 ```
 
-The first script adds the rpaths sibling addons need to load each other and re-signs them (see [Troubleshooting](#troubleshooting)). It resolves paths relative to the repository root, so it can be called from anywhere. The second symlinks the addon frameworks into the working directory so the Bare runtime can `dlopen` them, and cleans up afterwards. All of these paths are git-ignored.
+This needs a `wdk.config.js` first — the exact file and an explanation of each flag are in
+[INTEGRATION.md](INTEGRATION.md#running-the-macos-test-suite-for-contributors-to-this-repo). Expect 24 tests
+to pass in about a minute.
+
+The setup script places the generated files where the tests look and runs
+`./Scripts/prepare-macos-frameworks.sh` for you (it adds the rpaths sibling addons need to load each other,
+re-signs them ad hoc, and removes the download quarantine from BareKit — see
+[Troubleshooting](#troubleshooting)). `test-with-frameworks.sh` wraps `swift test` with BareKit linked and
+symlinks the addon frameworks into the working directory so the Bare runtime can `dlopen` them, then cleans up.
+All of these generated paths are git-ignored.
 
 ## Troubleshooting
 
 > These apply to the manual artifact-wiring path in
-> [INTEGRATION.md](INTEGRATION.md#doing-it-manually). If you're using the
+> [INTEGRATION.md](INTEGRATION.md#doing-it-manually-what-the-script-automates). If you're using the
 > automated `wdk-setup` path, Xcode's own SwiftPM embed phase handles
 > signing correctly on its own — you shouldn't hit these at all.
 
